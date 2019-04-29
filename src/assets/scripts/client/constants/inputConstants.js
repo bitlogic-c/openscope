@@ -30,6 +30,7 @@ export const KEY_CODES = {
     NUM_ADD: 'NumpadAdd',
     NUM_SUBTRACT: 'NumpadSubtract',
     NUM_DIVIDE: 'NumpadDivide',
+    NUM_ENTER: 'NumpadEnter',
     // arrow keys
     LEFT_ARROW: 'ArrowLeft',
     UP_ARROW: 'ArrowUp',
@@ -91,6 +92,19 @@ export const LEGACY_KEY_CODES = {
     F12: 123,
     // `
     BAT_TICK: 220
+};
+
+/**
+ * Enumeration of the mouse button names
+ *
+ * @property MOUSE_BUTTON_NAMES
+ * @type {Object}
+ * @final
+ */
+export const MOUSE_BUTTON_NAMES = {
+    LEFT: 'left',
+    MIDDLE: 'middle',
+    RIGHT: 'right'
 };
 
 /**
