@@ -7,6 +7,7 @@
 
 
 ### Enhancements & Refactors
+- [#1381](https://github.com/openscope/openscope/issues/1381) - Change all airport names in airport loadlist to the official English name
 
 
 # 6.12.3 (April 22, 2019)
