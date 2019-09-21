@@ -1,4 +1,4 @@
-/* eslint-disable arrow-parens, max-len, import/no-extraneous-dependencies*/
+/* eslint-disable arrow-parens, max-len, import/no-extraneous-dependencies */
 import ava from 'ava';
 import _isEqual from 'lodash/isEqual';
 
@@ -117,18 +117,27 @@ ava('.findHoldCommandByType() returns a fixName when passed a valid fixName', (t
 });
 
 ava('.holdParser() returns an array of length 3 when passed a fixname as the only argument', t => {
-    const expectedResult = ['right', '1min', 'dumba'];
+    const expectedResult = [null, null, 'dumba'];
     const result = holdParser(['dumba']);
 
     t.true(_isEqual(result, expectedResult));
 });
 
 ava('.holdParser() returns an array of length 3 when passed a direction and fixname as arguments', t => {
-    const expectedResult = ['left', '1min', 'dumba'];
+    const expectedResult = ['left', null, 'dumba'];
     let result = holdParser(['dumba', 'left']);
     t.true(_isEqual(result, expectedResult));
 
     result = holdParser(['left', 'dumba']);
+    t.true(_isEqual(result, expectedResult));
+});
+
+ava('.holdParser() returns an array of length 3 when passed a legLength and fixname as arguments', t => {
+    const expectedResult = [null, '1min', 'dumba'];
+    let result = holdParser(['dumba', '1min']);
+    t.true(_isEqual(result, expectedResult));
+
+    result = holdParser(['1min', 'dumba']);
     t.true(_isEqual(result, expectedResult));
 });
 
