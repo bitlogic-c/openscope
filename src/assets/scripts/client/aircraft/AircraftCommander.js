@@ -12,6 +12,7 @@ import {
     FLIGHT_PHASE
 } from '../constants/aircraftConstants';
 import { EVENT } from '../constants/eventNames';
+import { DEFAULT_HOLD_PARAMETERS } from '../constants/waypointConstants';
 import { round } from '../math/core';
 import { AIRCRAFT_COMMAND_MAP } from '../parsers/aircraftCommandParser/aircraftCommandMap';
 import { speech_say } from '../speech';
@@ -309,11 +310,27 @@ export default class AircraftCommander {
             return [false, `unable to hold at unknown fix ${fixName}`];
         }
 
-        const holdParameters = {
-            turnDirection,
-            legLength,
-            inboundHeading: fixModel.positionModel.bearingFromPosition(aircraft.positionModel)
-        };
+        const holdModel = AirportController.current.holdCollection.findHoldByName(fixName);
+
+        // Rather than the argumentParser setting the default values, we'll use DEFAULT_HOLD_PARAMETERS
+        const holdParameters = Object.assign(
+            {},
+            DEFAULT_HOLD_PARAMETERS,
+            holdModel ? holdModel.holdParameters : {}
+        );
+
+        // Prefer values provided by the argumentParser
+        if (turnDirection !== null) {
+            holdParameters.turnDirection = turnDirection;
+        }
+        if (legLength !== null) {
+            holdParameters.legLength = legLength;
+        }
+
+        // inboundHeading is required, so if no HoldModel is available then use the course to the fix
+        if (holdParameters.inboundHeading == null) {
+            holdParameters.inboundHeading = fixModel.positionModel.bearingFromPosition(aircraft.positionModel);
+        }
 
         return aircraft.pilot.initiateHoldingPattern(fixName, holdParameters);
     }

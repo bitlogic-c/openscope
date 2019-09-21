@@ -178,11 +178,11 @@ export const holdParser = (args) => {
     const fixName = findHoldCommandByType(HOLD_COMMAND_ARG_NAMES.FIX_NAME, args);
     const turnDirection = _defaultTo(
         findHoldCommandByType(HOLD_COMMAND_ARG_NAMES.TURN_DIRECTION, args),
-        'right'
+        null
     );
     const legLength = _defaultTo(
         findHoldCommandByType(HOLD_COMMAND_ARG_NAMES.LEG_LENGTH, args),
-        '1min'
+        null
     );
 
     return [turnDirection, legLength, fixName];
