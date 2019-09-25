@@ -3,6 +3,9 @@ import _random from 'lodash/random';
 import _without from 'lodash/without';
 import StripViewCollection from './StripViewCollection';
 import StripViewModel from './StripViewModel';
+import EventBus from '../../lib/EventBus';
+import { leftPad } from '../../utilities/generalUtilities';
+import { EVENT } from '../../constants/eventNames';
 import { INVALID_INDEX } from '../../constants/globalConstants';
 import { SELECTORS } from '../../constants/selectors';
 
@@ -38,6 +41,15 @@ export default class StripViewController {
         this._collection = null;
 
         /**
+         * Local reference to the event bus
+         *
+         * @for RadarTargetModel
+         * @property _eventBus
+         * @type {EventBus}
+         */
+        this._eventBus = EventBus;
+
+        /**
          * Root list view element
          *
          * @property $stripView
@@ -71,7 +83,7 @@ export default class StripViewController {
 
         /**
          * @property _cidNumbersInUse
-         * @type {array<number>}
+         * @type {array<string>}
          * @private
          */
         this._cidNumbersInUse = [];
@@ -179,6 +191,8 @@ export default class StripViewController {
 
         this._collection.addItem(stripViewModel);
 
+        this._eventBus.trigger(EVENT.ADD_STRIPVIEW, stripViewModel);
+
         if (aircraftModel.isDeparture() || aircraftModel.isControllable) {
             this._addViewToStripList(stripViewModel);
         }
@@ -214,7 +228,9 @@ export default class StripViewController {
      */
     deselectStripView(stripViewModel) {
         if (!(stripViewModel instanceof StripViewModel)) {
-            throw new TypeError(`Expected stripViewModel to be an instance of StripViewModel but instead found ${typeof stripViewModel}`);
+            throw new TypeError(
+                `Expected stripViewModel to be an instance of StripViewModel but instead found ${typeof stripViewModel}`
+            );
         }
 
         stripViewModel.removeActiveState();
@@ -263,6 +279,9 @@ export default class StripViewController {
 
         this._removeCidFromUse(stripViewModel.cid);
         this._collection.removeItem(stripViewModel);
+
+        this._eventBus.trigger(EVENT.REMOVE_STRIPVIEW, stripViewModel.cid);
+
         stripViewModel.destroy();
     }
 
@@ -322,11 +341,11 @@ export default class StripViewController {
      *
      * @for StripViewController
      * @method _generateCidNumber
-     * @return nextCid {number}
+     * @return nextCid {string}
      * @private
      */
     _generateCidNumber() {
-        const nextCid = _random(1, CID_UPPER_BOUND);
+        const nextCid = leftPad(_random(1, CID_UPPER_BOUND).toString(10), 3);
 
         if (this._cidNumbersInUse.indexOf(nextCid) !== INVALID_INDEX) {
             return this._generateCidNumber();
@@ -344,7 +363,7 @@ export default class StripViewController {
      *
      * @for StripViewController
      * @method _removeCidFromUse
-     * @param cid {number}
+     * @param cid {string}
      * @private
      */
     _removeCidFromUse(cid) {
