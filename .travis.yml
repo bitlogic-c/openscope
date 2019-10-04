@@ -27,14 +27,18 @@ notifications:
       - <%{build_url}|#%{build_number}> (<%{compare_url}|%{commit}>) %{result} in %{duration}
       - "%{commit_subject}"
 
+script:
+  - npm run build
+  - npm run lint-diff -- $TRAVIS_COMMIT_RANGE
+
 jobs:
   include:
-    - stage: build
-      script:
-        - npm run build
-        - npm run test
-        - npm run lint-diff -- $TRAVIS_COMMIT_RANGE
-    - stage: coverage
+    - stage: 'test'
+      script: npm run test
+# - stage: report
+#   script:
+#     - npm run report
+    - stage: 'coverage'
       script: npm run coveralls
 
 # jobs:
