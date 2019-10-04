@@ -1,10 +1,6 @@
 sudo: false
 language: node_js
 node_js: '11.3'
-branches:
-  only:
-  - develop
-  - master
 git:
   depth: 3
 cache:
