@@ -33,20 +33,14 @@ notifications:
 
 jobs:
     include:
-        - stage: 'Build & Test'
-          name: 'Build'
+        - name: 'Build'
           script: npm run build
         - name: 'Test'
           script: npm run test
         - name: 'Lint'
           script: npm run lint-diff -- $TRAVIS_COMMIT_RANGE
-# - stage: report
-#   script:
-#     - npm run report
-    # - stage: 'coverage'
-    #   script: npm run coveralls
 
-after_success:
+after_script:
     - npm run coveralls
 
 # jobs:
