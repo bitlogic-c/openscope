@@ -683,18 +683,25 @@ export default class InputController {
         let scopeCommandModel;
         const userCommand = this.input.command.trim().toLowerCase();
 
-        try {
-            scopeCommandModel = new ScopeCommandModel(userCommand);
-        } catch (error) {
-            UiController.ui_log('ERROR: BAD SYNTAX', true);
+        // REMOVES ALL AIRCRAFT
+        if (userCommand == 'devel_clear') {
+            this._aircraftController.aircraft_remove_all();
 
-            throw error;
+        } else {
+            try {
+                scopeCommandModel = new ScopeCommandModel(userCommand);
+                } 
+            catch (error) {
+                UiController.ui_log('ERROR: BAD SYNTAX', true);
+
+                throw error;
+            }
+
+            const [successful, response] = this._scopeModel.runScopeCommand(scopeCommandModel);
+            const isWarning = !successful;
+
+            UiController.ui_log(response, isWarning);
         }
-
-        const [successful, response] = this._scopeModel.runScopeCommand(scopeCommandModel);
-        const isWarning = !successful;
-
-        UiController.ui_log(response, isWarning);
     }
 
     /**
