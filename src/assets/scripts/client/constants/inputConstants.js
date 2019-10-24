@@ -49,6 +49,14 @@ export const KEY_CODES = {
     F10: 'F10',
     F11: 'F11',
     F12: 'F12',
+    F13: 'F13',
+    F14: 'F14',
+    F15: 'F15',
+    F16: 'F16',
+    F17: 'F17',
+    F18: 'F18',
+    F19: 'F19',
+ 
     // `
     BAT_TICK: 'Backquote'
 };

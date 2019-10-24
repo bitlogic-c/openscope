@@ -62,6 +62,7 @@ export default class InputController {
         this._mouseDownScreenPosition = [0, 0];
         this.input.isMouseDown = false;
         this.commandBarContext = COMMAND_CONTEXT.AIRCRAFT;
+        this.scrollZoomMode = true
 
         this._init();
     }
@@ -212,7 +213,12 @@ export default class InputController {
      * @param event {jquery Event}
      */
     _onMouseScroll(event) {
+        if (!this.scrollZoomMode) {
+            return;
+        }
+
         if (event.originalEvent.wheelDelta > 0 || event.originalEvent.detail < 0) {
+            
             CanvasStageModel.zoomIn();
 
             return;
@@ -480,6 +486,22 @@ export default class InputController {
                 this._toggleCommandBarContext();
 
                 break;
+
+            case KEY_CODES.F18:
+            case LEGACY_KEY_CODES.F18:
+                CanvasStageModel.zoomOut();
+                break;
+
+            case KEY_CODES.F19:
+            case LEGACY_KEY_CODES.F19:
+                if (event.originalEvent.shiftKey) {
+                    this.scrollZoomMode = !this.scrollZoomMode;
+                    UiController.ui_log(`Mouse Scroll Mode: ${this.scrollZoomMode}`,false)
+                } else {
+                    CanvasStageModel.zoomIn();
+                }
+                break;
+
             case KEY_CODES.ESCAPE:
             case LEGACY_KEY_CODES.ESCAPE:
                 UiController.closeAllDialogs();
@@ -690,8 +712,7 @@ export default class InputController {
         } else {
             try {
                 scopeCommandModel = new ScopeCommandModel(userCommand);
-                } 
-            catch (error) {
+            } catch (error) {
                 UiController.ui_log('ERROR: BAD SYNTAX', true);
 
                 throw error;
