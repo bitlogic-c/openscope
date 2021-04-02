@@ -32,10 +32,10 @@ export const EVENT = {
      * css classname removed
      *
      * @memberof EVENT
-     * @property DESELECT_ACTIVE_STRIP_VIEW
+     * @property DESELECT_AIRCRAFT
      * @type {string}
      */
-    DESELECT_ACTIVE_STRIP_VIEW: 'deselect-active-strip-view',
+    DESELECT_AIRCRAFT: 'deselect-aircraft',
 
     /**
      * Event used to notify the `CanvasController` when a re-draw
@@ -59,15 +59,6 @@ export const EVENT = {
      * @type {string}
      */
     PAN_VIEWPORT: 'pan-viewport',
-
-    /**
-     * Pause/unpause the game loop
-     *
-     * @memberof EVENT
-     * @property PAUSE_TOGGLE
-     * @type {string}
-     */
-    PAUSE_TOGGLE: 'pause-toggle',
 
     /**
      * Fired when the update loop should be either paused or resumed.
@@ -129,14 +120,24 @@ export const EVENT = {
     REQUEST_TO_CENTER_POINT_IN_VIEW: 'request-to-center-point-in-view',
 
     /**
-     * An aircraft data block was clicked and the corresponding
+     * An aircraft radar return was double clicked and the corresponding
+     * `StripViewModel` must be scrolled into view
+     *
+     * @memberof EVENT
+     * @property SCROLL_TO_AIRCRAFT
+     * @type {string}
+     */
+    SCROLL_TO_AIRCRAFT: 'scroll-to-aircraft',
+
+    /**
+     * An aircraft radar return was clicked and the corresponding
      * `StripViewModel` must also be selected
      *
      * @memberof EVENT
-     * @property SELECT_STRIP_VIEW_FROM_DATA_BLOCK
+     * @property SELECT_AIRCRAFT
      * @type {string}
      */
-    SELECT_STRIP_VIEW_FROM_DATA_BLOCK: 'select-strip-view-from-data-block',
+    SELECT_AIRCRAFT: 'select-aircraft',
 
     /**
      * An aircraft progress strip was clicked
@@ -176,10 +177,40 @@ export const EVENT = {
 
     /**
      * @memberof EVENT
+     * @property TOGGLE_AIRPORT_GUIDE
+     * @type {string}
+     */
+    TOGGLE_AIRPORT_GUIDE: 'toggle-airport-guide',
+
+    /**
+     * @memberof EVENT
+     * @property TOGGLE_AIRSPACE
+     * @type {string}
+     */
+    TOGGLE_AIRSPACE: 'toggle-airspace',
+
+    /**
+     * @memberof EVENT
+     * @property TOGGLE_CHANGELOG
+     * @type {string}
+     */
+    TOGGLE_CHANGELOG: 'toggle-changelog',
+
+    /**
+     * @memberof EVENT
      * @property TOGGLE_LABELS
      * @type {string}
      */
     TOGGLE_LABELS: 'toggle-labels',
+
+    /**
+     * Pause/unpause the game loop
+     *
+     * @memberof EVENT
+     * @property TOGGLE_PAUSE
+     * @type {string}
+     */
+    TOGGLE_PAUSE: 'toggle-pause',
 
     /**
      * @memberof EVENT
@@ -238,6 +269,13 @@ export const EVENT = {
      * @type {string}
      */
     RANGE_RINGS_CHANGE: 'range-rings-change',
+
+    /**
+     * @memberof EVENT
+     * @property MEASURE_TOOL_STYLE_CHANGE
+     * @type {string}
+     */
+    MEASURE_TOOL_STYLE_CHANGE: 'measure-tool-style-change',
 
     /**
      * A click has been registered in the unpause button shown within the

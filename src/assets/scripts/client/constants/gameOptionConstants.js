@@ -1,4 +1,5 @@
 import { EVENT } from './eventNames';
+import { MEASURE_TOOL_STYLE } from './inputConstants';
 
 /* eslint-disable max-len, import/prefer-default-export */
 /**
@@ -9,14 +10,15 @@ import { EVENT } from './eventNames';
  * @final
  */
 export const GAME_OPTION_NAMES = {
-    THEME: 'theme',
     CONTROL_METHOD: 'controlMethod',
-    PROJECTED_TRACK_LINE_LENGTHS: 'ptlLengths',
     DRAW_PROJECTED_PATHS: 'drawProjectedPaths',
-    SOFT_CEILING: 'softCeiling',
     DRAW_ILS_DISTANCE_SEPARATOR: 'drawIlsDistanceSeparator',
+    MEASURE_TOOL_PATH: 'measureToolPath',
     MOUSE_CLICK_DRAG: 'mouseClickDrag',
-    RANGE_RINGS: 'rangeRings'
+    PROJECTED_TRACK_LINE_LENGTHS: 'ptlLengths',
+    RANGE_RINGS: 'rangeRings',
+    SOFT_CEILING: 'softCeiling',
+    THEME: 'theme'
 };
 
 /**
@@ -93,16 +95,24 @@ export const GAME_OPTION_VALUES = [
         onChangeEventHandler: null,
         optionList: [
             {
-                displayLabel: '1-2-4-8',
-                value: '1-2-4-8'
+                displayLabel: '0.5 x n ... 8',
+                value: '0.5-1-1.5-2-2.5-3-3.5-4-4.5-5-5.5-6-6.5-7-7.5-8'
+            },
+            {
+                displayLabel: '1.0 x n ... 8',
+                value: '1-2-3-4-5-6-7-8'
             },
             {
                 displayLabel: '1-2-4-6-8-10-12-14-16',
                 value: '1-2-4-6-8-10-12-14-16'
             },
             {
-                displayLabel: '1-2-3-4-5-6-7-8',
-                value: '1-2-3-4-5-6-7-8'
+                displayLabel: '0.5-1-2-4-8',
+                value: '0.5-1-2-4-8'
+            },
+            {
+                displayLabel: '1-2-4-8',
+                value: '1-2-4-8'
             }
         ]
     },
@@ -202,6 +212,28 @@ export const GAME_OPTION_VALUES = [
             {
                 displayLabel: '20 nm',
                 value: 20
+            }
+        ]
+    },
+    {
+        name: GAME_OPTION_NAMES.MEASURE_TOOL_PATH,
+        defaultValue: '0',
+        description: 'Measure path style',
+        help: 'How the path is rendered when using the range/bearing measuring tool',
+        type: 'select',
+        onChangeEventHandler: EVENT.MEASURE_TOOL_STYLE_CHANGE,
+        optionList: [
+            {
+                displayLabel: 'Straight lines only',
+                value: MEASURE_TOOL_STYLE.STRAIGHT
+            },
+            {
+                displayLabel: 'Arc to next fix, then straight',
+                value: MEASURE_TOOL_STYLE.ARC_TO_NEXT
+            },
+            {
+                displayLabel: 'All lines arced',
+                value: MEASURE_TOOL_STYLE.ALL_ARCED
             }
         ]
     }

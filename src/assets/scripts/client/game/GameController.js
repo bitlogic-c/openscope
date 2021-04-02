@@ -127,7 +127,7 @@ class GameController {
      */
     createChildren() {
         // see comment in constructor. tl;dr these props should be used but are not because they break tests
-        // this._$pauseToggleElement = $(SELECTORS.DOM_SELECTORS.PAUSE_TOGGLE);
+        // this._$pauseToggleElement = $(SELECTORS.DOM_SELECTORS.TOGGLE_PAUSE);
         // this._$fastForwardElement = $(SELECTORS.DOM_SELECTORS.FAST_FORWARDS);
         // this._$scoreElement = $(SELECTORS.DOM_SELECTORS.SCORE);
 
@@ -261,11 +261,29 @@ class GameController {
     updateTimescale(nextValue) {
         if (nextValue === 0) {
             this.game_timewarp_toggle();
-
+            return;
+        } else if (nextValue < 0) {
             return;
         }
 
         TimeKeeper.updateSimulationRate(nextValue);
+        EventTracker.recordEvent(TRACKABLE_EVENT.OPTIONS, 'timewarp', nextValue);
+
+        const $fastForwards = $(SELECTORS.DOM_SELECTORS.FAST_FORWARDS);
+
+        if (nextValue === 1) {
+            $fastForwards.removeClass(SELECTORS.CLASSNAMES.SPEED_2);
+            $fastForwards.removeClass(SELECTORS.CLASSNAMES.SPEED_5);
+            $fastForwards.prop('title', 'Set time warp to 2');
+        } else if (nextValue < 5) {
+            $fastForwards.removeClass(SELECTORS.CLASSNAMES.SPEED_5);
+            $fastForwards.addClass(SELECTORS.CLASSNAMES.SPEED_2);
+            $fastForwards.prop('title', 'Set time warp to 5');
+        } else {
+            $fastForwards.removeClass(SELECTORS.CLASSNAMES.SPEED_2);
+            $fastForwards.addClass(SELECTORS.CLASSNAMES.SPEED_5);
+            $fastForwards.prop('title', 'Reset time warp');
+        }
     }
 
     /**
@@ -278,27 +296,12 @@ class GameController {
      * @method game_timewarp_toggle
      */
     game_timewarp_toggle() {
-        const $fastForwards = $(SELECTORS.DOM_SELECTORS.FAST_FORWARDS);
-
         if (TimeKeeper.simulationRate >= 5) {
-            TimeKeeper.updateSimulationRate(1);
-            EventTracker.recordEvent(TRACKABLE_EVENT.OPTIONS, 'timewarp', '1');
-
-            $fastForwards.removeClass(SELECTORS.CLASSNAMES.SPEED_5);
-            $fastForwards.prop('title', 'Set time warp to 2');
+            this.updateTimescale(1);
         } else if (TimeKeeper.simulationRate === 1) {
-            TimeKeeper.updateSimulationRate(2);
-            EventTracker.recordEvent(TRACKABLE_EVENT.OPTIONS, 'timewarp', '2');
-
-            $fastForwards.addClass(SELECTORS.CLASSNAMES.SPEED_2);
-            $fastForwards.prop('title', 'Set time warp to 5');
+            this.updateTimescale(2);
         } else {
-            TimeKeeper.updateSimulationRate(5);
-            EventTracker.recordEvent(TRACKABLE_EVENT.OPTIONS, 'timewarp', '5');
-
-            $fastForwards.removeClass(SELECTORS.CLASSNAMES.SPEED_2);
-            $fastForwards.addClass(SELECTORS.CLASSNAMES.SPEED_5);
-            $fastForwards.prop('title', 'Reset time warp');
+            this.updateTimescale(5);
         }
     }
 
@@ -309,7 +312,7 @@ class GameController {
     game_pause() {
         TimeKeeper.setPause(true);
 
-        const $pauseToggleElement = $(SELECTORS.DOM_SELECTORS.PAUSE_TOGGLE);
+        const $pauseToggleElement = $(SELECTORS.DOM_SELECTORS.TOGGLE_PAUSE);
 
         $pauseToggleElement.addClass(SELECTORS.CLASSNAMES.ACTIVE);
         $pauseToggleElement.attr('title', 'Resume simulation');
@@ -323,7 +326,7 @@ class GameController {
     game_unpause() {
         TimeKeeper.setPause(false);
 
-        const $pauseToggleElement = $(SELECTORS.DOM_SELECTORS.PAUSE_TOGGLE);
+        const $pauseToggleElement = $(SELECTORS.DOM_SELECTORS.TOGGLE_PAUSE);
 
         $pauseToggleElement.removeClass(SELECTORS.CLASSNAMES.ACTIVE);
         $pauseToggleElement.attr('title', 'Pause simulation');

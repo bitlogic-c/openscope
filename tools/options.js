@@ -3,6 +3,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '../');
 const src = './src';
 const srcAssetsDir = path.join(src, 'assets');
+const srcDocumentationDir = path.join(ROOT, 'documentation/airport-guides');
 const srcMarkup = path.join(src, 'templates');
 const scrScriptsFonts = path.join(srcAssetsDir, 'fonts');
 const srcScriptsDir = path.join(srcAssetsDir, 'scripts');
@@ -23,6 +24,7 @@ options.DIR = {
     SRC: src,
     SRC_ASSETS: srcAssetsDir,
     SRC_FONTS: scrScriptsFonts,
+    SRC_GUIDES: srcDocumentationDir,
     SRC_MARKUP: srcMarkup,
     SRC_SCRIPTS: srcScriptsDir,
 
@@ -44,8 +46,10 @@ options.DIR = {
     DIST_AIRCRAFT: path.join(distAssets, 'aircraft'),
     DIST_AIRLINES: path.join(distAssets, 'airlines'),
     DIST_AIRPORTS: path.join(distAssets, 'airports'),
+    DIST_GUIDES: path.join(distAssets, 'guides'),
     DIST_FONT: path.join(distAssets, 'fonts'),
     DIST_IMAGES: path.join(distAssets, 'images'),
+    DIST_TUTORIAL: path.join(distAssets, 'tutorial'),
     DIST_SCRIPTS_CLIENT: path.join(distAssets, 'scripts/client'),
     DIST_SCRIPTS_SERVER: path.join(distAssets, 'scripts/server'),
     DIST_STYLE: path.join(distAssets, 'style')
@@ -69,6 +73,7 @@ options.GLOB = {
     STATIC_AIRPORTS: path.join(options.DIR.BUILD_ASSETS, 'airports/**/*'),
     FONTS: path.join(options.DIR.BUILD_ASSETS, 'fonts/**/*'),
     IMAGES: path.join(options.DIR.BUILD_ASSETS, 'images/**/*'),
+    TUTORIAL: path.join(options.DIR.BUILD_ASSETS, 'tutorial/**/*'),
     SRC: path.join(options.DIR.SRC, '**/*'),
     BUILD: path.join(options.DIR.BUILD, '**/*'),
     JS: path.join(options.DIR.SRC_SCRIPTS, '**/*.js'),
@@ -94,6 +99,7 @@ options.TASKS = {
     DEFAULT: 'default',
     MARKUP: 'markup',
     MARKDOWN: {
+        ASSEMBLE: 'markdown:assemble',
         CHANGELOG: 'markdown:changelog'
     },
     JSON: {

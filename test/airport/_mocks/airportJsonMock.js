@@ -32,20 +32,20 @@ export const AIRPORT_JSON_KLAS_MOCK = {
             "ceiling": 190,
             "airspace_class": "B",
             "poly": [
-                ["N35d57m50.000", "W115d51m15.000"],
-                ["N35d34m30.000", "W115d29m00.000"],
-                ["N35d34m30.000", "W114d55m00.000"],
-                ["N35d52m00.000", "W114d22m45.000"],
-                ["N36d14m15.000", "W114d22m45.000"],
-                ["N36d23m51.000", "W114d39m48.000"],
-                ["N36d21m17.000", "W114d45m53.000"],
-                ["N36d11m47.000", "W114d58m06.000"],
-                ["N36d11m09.000", "W114d58m56.000"],
-                ["N36d11m22.000", "W115d00m56.000"],
-                ["N36d12m25.000", "W115d10m46.000"],
-                ["N36d13m00.000", "W115d11m35.000"],
-                ["N36d16m20.000", "W115d40m00.000"],
-                ["N36d20m45.000", "W115d51m15.000"]
+                [35.9638888888888889, -115.8541666666666666],
+                [35.575, -115.48333333333333334],
+                [35.575, -114.9166666666666666],
+                [35.8666666666666667, -114.37916666666666665],
+                [36.2375, -114.37916666666666665],
+                [36.3975, -114.6633333333333333],
+                [36.35472222222222227, -114.7647222222222222],
+                [36.1963888888888889, -114.9683333333333334],
+                [36.18583333333333335, -114.9822222222222222],
+                [36.18944444444444444, -115.015555555555555555],
+                [36.20694444444444443, -115.17944444444444446],
+                [36.21666666666666667, -115.19305555555555556],
+                [36.2722222222222222, -115.6666666666666666],
+                [36.3458333333333333, -115.8541666666666666]
             ]
         }
     ],
@@ -202,6 +202,9 @@ export const AIRPORT_JSON_KLAS_MOCK = {
             "ils": [true, false]
         }
     ],
+    "holds": {
+        "BAKRR": "360|right|4nm|S230-"
+    },
     "airways": {
         "V394": ["DAG", "DISBE", "CHRLT", "CLARR", "OASYS", "LAS", "SUVIE", "MMM"],
         "J11": ["BCE", "FREDD", "CORKR", "NAVHO", "KIDDR", "DRK"]
@@ -360,6 +363,29 @@ export const AIRPORT_JSON_KLAS_MOCK = {
             },
             "draw": [[]]
         },
+        // not a real route. used here to test procedural hold parameters
+        "GRNPA8": {
+            "icao": "GRNPA8",
+            "name": "Grandpa 8",
+            "entryPoints": {
+                "DAG": ["DAG", ["MISEN", "A240"]],
+                "TNP": ["TNP", "JOTNU", ["ZELMA", "A310-"]]
+            },
+            "body": [["CLARR", "A130|S250"], "SKEBR", ["KEPEC", "A130"], ["IPUMY", "A110|S230"], ["NIPZO", "A90"], ["SUNST", "A80|S210"], ["KIMME", "A80|S210"], ["CHIPZ", "A80|S170"], "POKRR", "PRINO"],
+            "holds": {
+                "IPUMY" : "270|left|1min|S220-"
+            },
+            "rwy": {
+                "KLAS01L": [],
+                "KLAS07L": [],
+                "KLAS07R": [],
+                "KLAS19L": ['LEFFT'],
+                "KLAS19R": ['RIGHT'],
+                "KLAS25L": [],
+                "KLAS25R": []
+            },
+            "draw": [[]]
+        },
         // not a real route. used here to test `SpawnPatternModel._generateWaypointListForRoute()`
         "GRNPA9": {
             "icao": "GRNPA9",
@@ -478,7 +504,6 @@ export const AIRPORT_JSON_KLAS_MOCK = {
                 ["swa", 15],
                 ["nks", 12],
                 ["scx", 5],
-                ["tcx/long", 3],
                 ["ual", 10],
                 ["vrd", 7],
                 ["vir", 4],
@@ -511,7 +536,6 @@ export const AIRPORT_JSON_KLAS_MOCK = {
                 ["swa", 15],
                 ["nks", 12],
                 ["scx", 5],
-                ["tcx/long", 3],
                 ["ual", 10],
                 ["vrd", 7],
                 ["vir", 4],
@@ -544,7 +568,6 @@ export const AIRPORT_JSON_KLAS_MOCK = {
                 ["swa", 15],
                 ["nks", 12],
                 ["scx", 5],
-                ["tcx/long", 3],
                 ["ual", 10],
                 ["vrd", 7],
                 ["vir", 4],
@@ -577,7 +600,6 @@ export const AIRPORT_JSON_KLAS_MOCK = {
                 ["swa", 15],
                 ["nks", 12],
                 ["scx", 5],
-                ["tcx/long", 3],
                 ["ual", 10],
                 ["vrd", 7],
                 ["vir", 4],
@@ -606,7 +628,6 @@ export const AIRPORT_JSON_KLAS_MOCK = {
                 ["swa", 15],
                 ["nks", 12],
                 ["scx", 5],
-                ["tcx/long", 3],
                 ["ual", 10],
                 ["vrd", 7],
                 ["vir", 4],
