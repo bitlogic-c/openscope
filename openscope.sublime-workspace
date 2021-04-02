@@ -1,0 +1,980 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "/Users/i857261/bin/canary.sh",
+			"settings":
+			{
+				"buffer_size": 2139,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/InputController.js",
+			"settings":
+			{
+				"buffer_size": 29396,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "package.json",
+			"settings":
+			{
+				"buffer_size": 3551,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "README.md",
+			"settings":
+			{
+				"buffer_size": 3754,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/scope/ScopeModel.js",
+			"settings":
+			{
+				"buffer_size": 10538,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/parsers/aircraftCommandParser/AircraftCommandModel.js",
+			"settings":
+			{
+				"buffer_size": 3404,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/parsers/aircraftCommandParser/aircraftCommandDefinitions.js",
+			"settings":
+			{
+				"buffer_size": 7089,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/aircraft/AircraftController.js",
+			"settings":
+			{
+				"buffer_size": 30247,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/aircraft/AircraftModel.js",
+			"settings":
+			{
+				"buffer_size": 94741,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "import _isNumber from 'lodash/isNumber';\nimport _uniqueId from 'lodash/uniqueId';\nimport {\n    adjustForMagneticNorth,\n    calculateDistanceToPointForX,\n    calculateDistanceToPointForY,\n    isValidGpsCoordinatePair\n} from './positionModelHelpers';\nimport { radians_normalize } from '../math/circle';\nimport {\n    degreesToRadians,\n    parseCoordinate,\n    parseElevation,\n    radiansToDegrees\n} from '../utilities/unitConverters';\nimport { PHYSICS_CONSTANTS } from '../constants/globalConstants';\nimport {\n    DEFAULT_SCREEN_POSITION,\n    GPS_COORDINATE_INDEX,\n    RELATIVE_POSITION_OFFSET_INDEX\n} from '../constants/positionConstants';\n\n/**\n * @class Position\n */\nexport default class DynamicPositionModel {\n    /**\n     * Coordinates may contain an optional elevation as a third element.\n     * It must be suffixed by either 'ft' or 'm' to indicate the units.\n     *\n     * Latitude and Longitude numbers may be one of the following forms:\n     *   Decimal degrees - `47.112388112`\n     *   Decimal degrees - `'N47.112388112'`\n     *   Decimal minutes - `'N38d38.109808'`\n     *   Decimal seconds - `'N58d27m12.138'`\n     *\n     * @for DynamicPositionModel\n     * @constructor\n     * @param coordinates {array<string|number>}    array in shape of [latitude, longitude]\n     * @param reference {StaticPositionModel}       position to use for calculating relative position\n     * @param magnetic_north {number}               magnetic declination (variation), in radians east\n     */\n    constructor(coordinates = [], reference = null, magnetic_north = 0) {\n        if (!isValidGpsCoordinatePair(coordinates)) {\n            throw new TypeError('Invalid coordinates passed to DynamicPositionModel. Expected shape of ' +\n                `\"[latitude, longitude]\" but received \"${coordinates}\"`);\n        }\n\n        /**\n         * @property _id\n         * @type {string}\n         */\n        this._id = _uniqueId('position-model-');\n\n        /**\n         * Latitudinal coordinate, in degrees\n         *\n         * @property latitude\n         * @type {number}\n         * @default 0\n         */\n        this.latitude = 0;\n\n        /**\n         * Longitudinal coordinate, in degrees\n         *\n         * @property longitude\n         * @type {number}\n         * @default 0\n         */\n        this.longitude = 0;\n\n        /**\n         * Altitude of this position, above MSL (mean sea level), in feet\n         *\n         * @property elevation\n         * @type {number}\n         * @default 0\n         */\n        this.elevation = 0;\n\n        /**\n         * PositionModel this position is magnetically rotated in reference to\n         *\n         * @property _referencePosition\n         * @type {DynamicPositionModel|null}\n         */\n        this._referencePosition = reference;\n\n        /**\n         * Magnetic declination, in radians east\n         *\n         * @property _magneticNorth\n         * @type {number}\n         */\n        this._magneticNorth = magnetic_north;\n\n        this.init(coordinates);\n    }\n\n    /**\n     * GPS coordinates in [latitude, longitude] order\n     * For reverse order, see `DynamicPositionModel.gpsXY`\n     *\n     * @property gps\n     * @return {array}\n     */\n    get gps() {\n        return [\n            this.latitude,\n            this.longitude\n        ];\n    }\n\n    /**\n     * GPS coordinates in [x,y] order\n     * For reverse order, see `DynamicPositionModel.gps`\n     *\n     * @property gpsXY\n     * @return {array}\n     */\n    get gpsXY() {\n        return [\n            this.longitude,\n            this.latitude\n        ];\n    }\n\n    /**\n     * @for DynamicPositionModel\n     * @property magneticNorth\n     * @return {number}\n     */\n    get magneticNorth() {\n        return this._magneticNorth;\n    }\n\n    /**\n     * Relative position, in km offset from the airport\n     *\n     * @property relativePosition\n     * @return {array}\n     */\n    get relativePosition() {\n        return this._calculateRelativePosition();\n    }\n\n    /**\n     * Kilometers east (magnetic) of the reference position\n     *\n     * @for DynamicPositionModel\n     * @property x\n     * @type {number}\n     */\n    get x() {\n        return this.relativePosition[RELATIVE_POSITION_OFFSET_INDEX.LONGITUDINAL];\n    }\n\n    /**\n     * Kilometers north (magnetic) of the reference position\n     *\n     * @for DynamicPositionModel\n     * @property y\n     * @type {number}\n     */\n    get y() {\n        return this.relativePosition[RELATIVE_POSITION_OFFSET_INDEX.LATITUDINAL];\n    }\n\n    /**\n     * @for DynamicPositionModel\n     * @method init\n     */\n    init(coordinates) {\n        this.latitude = parseCoordinate(coordinates[GPS_COORDINATE_INDEX.LATITUDE]);\n        this.longitude = parseCoordinate(coordinates[GPS_COORDINATE_INDEX.LONGITUDE]);\n\n        // TODO: this is using coersion and shoudld be updated to be more explicit\n        if (coordinates[GPS_COORDINATE_INDEX.ELEVATION] != null) {\n            this.elevation = parseElevation(coordinates[GPS_COORDINATE_INDEX.ELEVATION]);\n        }\n    }\n\n    /**\n     * Calculate the initial magnetic bearing from a given position to the position of `this`\n     *\n     * @for DynamicPositionModel\n     * @method bearingFromPosition\n     * @param position {DynamicPositionModel|StaticPositionModel} position we're comparing against\n     * @return {Number} magnetic bearing from `position` to `this`, in radians\n     */\n    bearingFromPosition(position) {\n        return position.bearingToPosition(this);\n    }\n\n    /**\n     * Calculate the initial magnetic bearing to a given position from the position of `this`\n     * Note: This method uses great circle math to determine the bearing. It is very accurate, but\n     * also a very expensive operation. If the precision is not needed, a vradial(vsub()) of the\n     * x/y positions is a more \"quick and dirty\" option.\n     *\n     * Source: Chris Veness, Movable Type Scripts\n     * Subject: \"Bearing\"\n     * Link: http://www.movable-type.co.uk/scripts/latlong.html\n     *\n     * @for DynamicPositionModel\n     * @method bearingToPosition\n     * @param position {DynamicPositionModel|StaticPositionModel} position we're comparing against\n     * @return {Number} magnetic bearing from `this` to `position`, in radians\n     */\n    bearingToPosition(position) {\n        const φ1 = degreesToRadians(this.latitude);\n        const φ2 = degreesToRadians(position.latitude);\n        const Δλ = degreesToRadians(position.longitude - this.longitude);\n        const y = Math.sin(Δλ) * Math.cos(φ2);\n        const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);\n        const θ = Math.atan2(y, x);\n\n        return radians_normalize(θ - this._magneticNorth);\n    }\n\n    /**\n     * Get the distance from `this` to a given position\n     *\n     * @for DynamicPositionModel\n     * @method distanceToPosition\n     * @param position {DynamicPositionModel|StaticPositionModel} position we're comparing against\n     * @return {number} distance to `position`, in nautical miles\n     */\n    distanceToPosition(position) {\n        const R = PHYSICS_CONSTANTS.EARTH_RADIUS_NM;\n        const φ1 = degreesToRadians(this.latitude);\n        const φ2 = degreesToRadians(position.latitude);\n        const Δφ = degreesToRadians(position.latitude - this.latitude);\n        const Δλ = degreesToRadians(position.longitude - this.longitude);\n        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +\n                Math.cos(φ1) * Math.cos(φ2) *\n                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);\n        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));\n        const d = R * c;\n\n        return d;\n    }\n\n    /**\n     * Returns a new `DynamicPositionModel` a given magnetic bearing/distance from `this`\n     *\n     * @for DynamicPositionModel\n     * @method generateDynamicPositionFromBearingAndDistance\n     * @param bearing {number} magnetic bearing, in radians\n     * @param distance {number} distance, in nautical miles\n     * @return {DynamicPositionModel}\n     */\n    generateDynamicPositionFromBearingAndDistance(bearing, distance) {\n        const [lat, lon] = this.generateCoordinatesFromBearingAndDistance(bearing, distance);\n        const dynamicPositionModel = new DynamicPositionModel([lat, lon], this._referencePosition, this._magneticNorth);\n\n        return dynamicPositionModel;\n    }\n\n    /**\n     * Returns the GPS coordinate pair a given magnetic bearing/distance from `this`\n     *\n     * Source: Chris Veness, Movable Type Scripts\n     * Subject: \"Destination point given distance and bearing from start point\"\n     * Link: http://www.movable-type.co.uk/scripts/latlong.html\n     *\n     * @for DynamicPositionModel\n     * @method generateDynamicPositionFromBearingAndDistance\n     * @param bearing {number} magnetic bearing, in radians\n     * @param distance {number} distance, in nautical miles\n     * @return {array} [latitude, longitude]\n     */\n    generateCoordinatesFromBearingAndDistance(bearing, distance) {\n        const R = PHYSICS_CONSTANTS.EARTH_RADIUS_NM;\n        const θ = bearing + this._magneticNorth; // true bearing, in radians\n        const d = distance;\n        const δ = d / R; // angular distance, in earth laps\n        const φ1 = degreesToRadians(this.latitude);\n        const λ1 = degreesToRadians(this.longitude);\n        const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));\n        const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));\n        const lat = radiansToDegrees(φ2);\n        const lon = radiansToDegrees(λ2);\n\n        return [lat, lon];\n    }\n\n    /**\n     * Change the lat/lon coordinates of `this`\n     *\n     * @for DynamicPositionModel\n     * @method setCoordinates\n     * @param gpsCoordinates {Array<number>} [latitude, longitude]\n     */\n    setCoordinates(gpsCoordinates) {\n        if (!isValidGpsCoordinatePair(gpsCoordinates)) {\n            return new TypeError('Expected valid GPS coordinates to be passed to Position.setCoordinates, ' +\n                `but received ${gpsCoordinates}`);\n        }\n\n        this.latitude = gpsCoordinates[GPS_COORDINATE_INDEX.LATITUDE];\n        this.longitude = gpsCoordinates[GPS_COORDINATE_INDEX.LONGITUDE];\n    }\n\n    /**\n     * Change the lat/lon coordinates of `this` by providing the distance to move along a given magnetic heading\n     *\n     * @for DynamicPositionModel\n     * @method setCoordinates\n     * @param bearing {number} magnetic bearing, in radians\n     * @param distance {number} distance, in nautical miles\n     */\n    setCoordinatesByBearingAndDistance(bearing, distance) {\n        const nextCoordinates = this.generateCoordinatesFromBearingAndDistance(bearing, distance);\n\n        this.setCoordinates(nextCoordinates);\n    }\n\n    /**\n     * Determine the `x` and `y` values of the `DynamicPositionModel`, used for drawing on the canvas\n     *\n     * @for DynamicPositionModel\n     * @method _calculateRelativePosition\n     * @return {array<number>}\n     * @private\n     */\n    _calculateRelativePosition() {\n        if (!this._hasReferencePosition()) {\n            return DEFAULT_SCREEN_POSITION;\n        }\n\n        return DynamicPositionModel.calculateRelativePosition(this.gps, this._referencePosition, this._magneticNorth);\n    }\n\n    /**\n     * Checks whether or not this `DynamicPositionModel` has a reference `DynamicPositionModel`\n     * Without the reference position, the rotation due to magnetic variation will not be applied\n     *\n     * @for DynamicPositionModel\n     * @method _hasReferencePosition\n     * @return {Boolean} whether this position is based on a reference position\n     * @private\n     */\n    _hasReferencePosition() {\n        return this._referencePosition !== null;\n    }\n}\n\n/**\n * Calculate x/y position from latitude and longitude and a referencePosition\n *\n * Provides a static method to calculate position without instantiating a `DynamicPositionModel` class.\n *\n * @function getPosition\n * @param coordinates {array<string>}\n * @param referencePosition {DynamicPositionModel|StaticPositionModel|null}\n * @param magneticNorth {number}\n * @return {array}\n * @static\n */\nDynamicPositionModel.calculat0eRelativePosition = (coordinates, referencePosition, magneticNorth) => {\n    if (!coordinates || !referencePosition || !_isNumber(magneticNorth)) {\n        throw new TypeError('Invalid parameter. DynamicPositionModel.calculateRelativePosition() requires ' +\n        'coordinates, referencePosition and magneticNorth as parameters');\n    }\n\n    const latitude = parseCoordinate(coordinates[GPS_COORDINATE_INDEX.LATITUDE]);\n    const longitude = parseCoordinate(coordinates[GPS_COORDINATE_INDEX.LONGITUDE]);\n    const canvasPositionX = calculateDistanceToPointForX(\n        referencePosition,\n        referencePosition.latitude,\n        longitude\n    );\n    const canvasPositionY = calculateDistanceToPointForY(\n        referencePosition,\n        latitude,\n        referencePosition.longitude\n    );\n    const { x, y } = adjustForMagneticNorth(canvasPositionX, canvasPositionY, magneticNorth);\n\n    return [x, y];\n};\n",
+			"file": "src/assets/scripts/client/base/DynamicPositionModel.js",
+			"file_size": 13112,
+			"file_write_time": 132148479625629530,
+			"settings":
+			{
+				"buffer_size": 13062,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/i857261/devel/cf-hello-world/docs/index.html",
+			"settings":
+			{
+				"buffer_size": 12,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/base/positionModelHelpers.js",
+			"settings":
+			{
+				"buffer_size": 3188,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/base/staticPositionToDynamicPositionHelper.js",
+			"settings":
+			{
+				"buffer_size": 538,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/parsers/scopeCommandParser/ScopeCommandModel.js",
+			"settings":
+			{
+				"buffer_size": 3410,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/parsers/scopeCommandParser/scopeCommandMap.js",
+			"settings":
+			{
+				"buffer_size": 856,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/trafficGenerator/buildPreSpawnAircraft.js",
+			"settings":
+			{
+				"buffer_size": 16275,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/trafficGenerator/SpawnScheduler.js",
+			"settings":
+			{
+				"buffer_size": 6695,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/server/index.js",
+			"settings":
+			{
+				"buffer_size": 509,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/assets/scripts/client/canvas/CanvasController.js",
+			"settings":
+			{
+				"buffer_size": 74908,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/Users/i857261/bldev",
+		"/Users/i857261/bldev/openscope",
+		"/Users/i857261/bldev/openscope/src",
+		"/Users/i857261/bldev/openscope/src/assets",
+		"/Users/i857261/bldev/openscope/src/assets/scripts",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/aircraft",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/airline",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/engine",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/game",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/lib",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/trafficGenerator",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/server"
+	],
+	"file_history":
+	[
+		"/Users/i857261/bldev/openscope/.nyc_output/51f4c1a5-1597-4c0a-9ccf-ddcb5f46fd79.json",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/index.js",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/App.js",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/AppController.js",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/InputController.js",
+		"/Users/i857261/bldev/openscope/src/assets/scripts/client/EventTracker.js",
+		"/Users/i857261/bldev/openscope/openscope.sublime-project",
+		"/Users/i857261/bldev/openscope/package",
+		"/Users/i857261/bin/worker_sql_123.sh",
+		"/Users/i857261/.bash_profile",
+		"/Users/i857261/devel/vcd/requirements.txt",
+		"/Users/i857261/devel/vcd/v.py",
+		"/Users/i857261/devel/fpa19-fpa-root/requirements.txt",
+		"/Users/i857261/bin/old_bin/bin/fpa19-dev.sh",
+		"/Users/i857261/devel/boctest/.gitignore",
+		"/Users/i857261/bin/test_daily.sh",
+		"/Users/i857261/bin/boctest2.sh",
+		"/Users/i857261/devel/devserver/ansible/hosts",
+		"/Users/i857261/devel/devserver/ansible/p100_test.yml",
+		"/Users/i857261/.ssh/config",
+		"/Users/i857261/Documents/2013 macbook air dimensions",
+		"/Users/i857261/.bash_",
+		"/Users/i857261/.ssh/id_rsa.pub",
+		"/Users/i857261/.ssh/known_hosts",
+		"/Library/Preferences/VMware Fusion/vmnet2/dhcpd.conf",
+		"/Users/i857261/projects/LocalWorkCurio/.gitignore"
+	],
+	"find":
+	{
+		"height": 24.0
+	},
+	"find_in_files":
+	{
+		"height": 102.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"SpawnScheduler",
+			"setScratchpad"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 10,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "/Users/i857261/bin/canary.sh",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2139,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								497,
+								497
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.86,
+							"syntax": "Packages/ShellScript/Bash.sublime-syntax"
+						},
+						"translation.x": 1064.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 13,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "src/assets/scripts/client/InputController.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 29396,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								26493,
+								26493
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.86,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 12054.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "package.json",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3551,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570786265.91,
+							"syntax": "Packages/JavaScript/JSON.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "README.md",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3754,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570786893.81,
+							"syntax": "Packages/Markdown/Markdown.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "src/assets/scripts/client/scope/ScopeModel.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 10538,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								7659,
+								7659
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.91,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 16,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "src/assets/scripts/client/parsers/aircraftCommandParser/AircraftCommandModel.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3404,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.92,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 15,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "src/assets/scripts/client/parsers/aircraftCommandParser/aircraftCommandDefinitions.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7089,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.92,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 14,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "src/assets/scripts/client/aircraft/AircraftController.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 30247,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								9036,
+								9036
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.86,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 3759.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "src/assets/scripts/client/aircraft/AircraftModel.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 94741,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2921,
+								2921
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570788104.23,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 790.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "src/assets/scripts/client/base/DynamicPositionModel.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 13062,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								12147,
+								12147
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570788243.78,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 4774.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "/Users/i857261/devel/cf-hello-world/docs/index.html",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 12,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								12,
+								12
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570819993.65,
+							"syntax": "Packages/HTML/HTML.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "src/assets/scripts/client/base/positionModelHelpers.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3188,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1733,
+								1732
+							],
+							[
+								1737,
+								1736
+							],
+							[
+								1828,
+								1827
+							],
+							[
+								1892,
+								1891
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570788589.32,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 596.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 12,
+					"file": "src/assets/scripts/client/base/staticPositionToDynamicPositionHelper.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 538,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								309,
+								309
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.92,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 11,
+					"type": "text"
+				},
+				{
+					"buffer": 13,
+					"file": "src/assets/scripts/client/parsers/scopeCommandParser/ScopeCommandModel.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3410,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2754,
+								2754
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.92,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 18,
+					"type": "text"
+				},
+				{
+					"buffer": 14,
+					"file": "src/assets/scripts/client/parsers/scopeCommandParser/scopeCommandMap.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 856,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.92,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 17,
+					"type": "text"
+				},
+				{
+					"buffer": 15,
+					"file": "src/assets/scripts/client/trafficGenerator/buildPreSpawnAircraft.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 16275,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.93,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 3478.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 10,
+					"type": "text"
+				},
+				{
+					"buffer": 16,
+					"file": "src/assets/scripts/client/trafficGenerator/SpawnScheduler.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6695,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								485,
+								499
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.93,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 12,
+					"type": "text"
+				},
+				{
+					"buffer": 17,
+					"file": "src/assets/scripts/server/index.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 509,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570769515.93,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 9,
+					"type": "text"
+				},
+				{
+					"buffer": 18,
+					"file": "src/assets/scripts/client/canvas/CanvasController.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 74908,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								37567,
+								37567
+							]
+						],
+						"settings":
+						{
+							"markdonw_live_preview_last_run": 1570785021.45,
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 28556.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 24.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "openscope.sublime-project",
+	"replace":
+	{
+		"height": 44.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"dyna",
+				"openscope/src/assets/scripts/client/base/DynamicPositionModel.js"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 392.0,
+		"last_filter": "Aircraft",
+		"selected_items":
+		[
+			[
+				"Aircraft",
+				"AircraftController"
+			],
+			[
+				"requestAnimationFrame",
+				"requestAnimationFrame"
+			],
+			[
+				"localStorage",
+				"localstorage"
+			],
+			[
+				"local",
+				"localstorage"
+			]
+		],
+		"width": 821.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": false,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 383.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
